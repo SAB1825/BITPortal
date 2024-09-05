@@ -38,3 +38,42 @@ export const getUserComplaints = async (req, res) => {
     res.status(500).json({ error: 'An error occurred while fetching complaints' });
   }
 };
+
+export const getComplaintStats = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const total = await Complaint.countDocuments({ user: userId });
+    const resolved = await Complaint.countDocuments({ user: userId, status: 'Resolved' });
+    const pending = await Complaint.countDocuments({ user: userId, status: { $ne: 'Resolved' } });
+
+    res.status(200).json({ total, resolved, pending });
+  } catch (error) {
+    console.error('Get complaint stats error:', error);
+    res.status(500).json({ error: 'An error occurred while fetching complaint statistics' });
+  }
+};
+
+export const getAllComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find().populate('user', 'username').sort({ createdAt: -1 });
+    res.status(200).json({ complaints });
+  } catch (error) {
+    console.error('Get all complaints error:', error);
+    res.status(500).json({ error: 'An error occurred while fetching complaints' });
+  }
+};
+
+export const updateComplaintStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const updatedComplaint = await Complaint.findByIdAndUpdate(id, { status }, { new: true });
+    if (!updatedComplaint) {
+      return res.status(404).json({ error: 'Complaint not found' });
+    }
+    res.status(200).json({ message: 'Complaint status updated successfully', complaint: updatedComplaint });
+  } catch (error) {
+    console.error('Update complaint status error:', error);
+    res.status(500).json({ error: 'An error occurred while updating the complaint status' });
+  }
+};

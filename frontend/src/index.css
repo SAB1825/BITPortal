@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.bg-transparent {
+  background: transparent;
+  background-color: transparent;
+  backdrop-filter: none;
+}

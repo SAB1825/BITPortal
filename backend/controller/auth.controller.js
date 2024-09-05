@@ -72,43 +72,60 @@ export const register = async (req, res) => {
 };
 
 export const verify = async (req, res) => {
+    console.log('Verify function called');
+    console.log('Request headers:', req.headers);
+    console.log('Request body:', req.body);
     const { email, verificationCode } = req.body;
     try {
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('User not found for email:', email);
             return res.status(400).json({ error: 'Invalid email address.' });
         }
         if (user.verificationCode !== verificationCode) {
+            console.log('Invalid verification code for user:', email);
             return res.status(400).json({ error: 'Invalid verification code.' });
         }
         user.isVerified = true;
+        user.verificationCode = undefined;
         await user.save();
+        console.log('User verified successfully:', email);
         res.status(200).json({ message: 'Email verified successfully.' });
     } catch (err) {
+        console.error('Verification error:', err);
         res.status(500).json({ error: 'Verification failed.' });
     }
 };
 
 export const signin = async (req, res) => {
+    console.log('Signin function called');
+    console.log('Request body:', req.body);
     try {
         const { email, password } = req.body;
 
         // Find the user by email
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('User not found for email:', email);
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Verify the password (assuming you're using bcrypt)
+        // Verify the password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
+            console.log('Invalid password for user:', email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Generate a JWT token
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
 
-        // Send the response with user info (including role) and token
+        console.log('Signin successful for user:', email);
+        // Send the response with user info and token
         res.status(200).json({
             message: 'Sign in successful',
             user: {

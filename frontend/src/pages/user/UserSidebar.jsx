@@ -11,7 +11,7 @@ const UserSidebar = () => {
   ];
 
   return (
-    <div className="bg-black text-gray-100 w-64 min-h-screen p-4">
+    <div className="w-64 min-h-screen p-4 t">
       <nav>
         <ul className="space-y-2">
           {menuItems.map((item, index) => (
@@ -20,8 +20,8 @@ const UserSidebar = () => {
                 to={item.path}
                 className={`flex items-center space-x-3 p-2 rounded-lg transition-colors duration-200 ${
                   location.pathname === item.path
-                    ? 'bg-white text-black'
-                    : 'hover:bg-[#212121]'
+                    ? 'bg-white bg-opacity-20 text-white'
+                    : 'text-white hover:bg-white hover:bg-opacity-10'
                 }`}
               >
                 <svg

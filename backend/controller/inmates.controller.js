@@ -29,7 +29,7 @@ export const addInmate = async (req, res) => {
     }
   };
   
-  export const getInmates = async (req, res) => {
+export const getInmates = async (req, res) => {
     try {
       const userId = req.user.userId;
       const user = await User.findById(userId).populate('inmates');

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '../../context/AuthContext'; // Add this import
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -55,7 +56,7 @@ const SignIn = () => {
       
       toast.success('Login successful!');
       
-      const redirectPath = userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+      const redirectPath = userRole === 'admin' ? '/admin' : '/user/dashboard';
       console.log(`Redirecting to ${redirectPath} in 2 seconds...`);
       
       setTimeout(() => {
@@ -70,19 +71,23 @@ const SignIn = () => {
   console.log('Rendering SignIn component');
 
   return (
-    <div className="min-h-screen bg-black flex flex-col  justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen  flex flex-col  justify-center py-12 sm:px-6 lg:px-8" style={{
+      background: 'linear-gradient(to bottom left, #000000 0%, #000000 35%, #3B1717 100%)'
+    }}>
       <ToastContainer position="top-right" autoClose={2000} />
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+      
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className=" py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <h2 className='mb-3 text-center text-3xl font-extrabold text-white'>BIT Staff Quarters Portal</h2>
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mb-6 text-center text-2xl font-extrabold text-white">
           Sign in to your account
         </h2>
       </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-black py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="email" className="block text-sm font-medium text-white">
                 Email address
               </label>
               <div className="mt-1">
@@ -92,7 +97,7 @@ const SignIn = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none text-white bg-[#232323] block w-full px-3 py-2 border hover:bg-[#292929] border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none text-white bg-[#191d22] block w-full px-3 py-2 border  border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -100,7 +105,7 @@ const SignIn = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="password" className="block text-sm font-medium text-white">
                 Password
               </label>
               <div className="mt-1">
@@ -110,7 +115,7 @@ const SignIn = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none text-white bg-[#232323] block w-full px-3 py-2 border hover:bg-[#292929] border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none text-white bg-[#191d22] block w-full px-3 py-2 border  border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
                   value={formData.password}
                   onChange={handleChange}
                 />

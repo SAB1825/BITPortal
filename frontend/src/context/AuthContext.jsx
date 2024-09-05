@@ -1,92 +1,93 @@
-import  { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+const AuthContext = createContext();
 
-const AuthContext = createContext(null);
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    userRole: null,
+    isLoading: true
+  });
 
   useEffect(() => {
-    // Check if the user is already logged in
-    const checkAuthStatus = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const response = await axios.get('/api/auth', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUser(response.data);
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const storedRole = localStorage.getItem('userRole');
+        console.log('Stored token:', token);
+        console.log('Stored role:', storedRole);
+
+        if (!token) {
+          console.log('No token found, not authenticated');
+          setAuthState({ isAuthenticated: false, userRole: null, isLoading: false });
+          return;
         }
+
+        const response = await fetch('http://localhost:5000/api/auth/protected', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log('Auth check response:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Auth check data:', data);
+          
+          const finalRole = storedRole || data.user.role;
+          console.log('Final role:', finalRole);
+
+          setAuthState({
+            isAuthenticated: true,
+            userRole: finalRole,
+            isLoading: false
+          });
+        } else {
+          console.error('Auth check failed:', response.status, response.statusText);
+          localStorage.removeItem('token');
+          localStorage.removeItem('userRole');
+          setAuthState({ isAuthenticated: false, userRole: null, isLoading: false });
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+        setAuthState({ isAuthenticated: false, userRole: null, isLoading: false });
       }
-      setLoading(false);
     };
 
-    checkAuthStatus();
+    checkAuth();
   }, []);
 
-  const login = async (email, password) => {
-    try {
-      const response = await axios.post('/api/auth/signin', { email, password });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      return user;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    }
+  const login = (token, userRole) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('userRole', userRole);
+    setAuthState({
+      isAuthenticated: true,
+      userRole: userRole,
+      isLoading: false
+    });
   };
-
-  const register = async (userData) => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    }
-  };
-
-  const verify = async (verificationCode) => {
-    try {
-      const response = await axios.post('/api/auth/verify', { verificationCode });
-      return response.data;
-    } catch (error) {
-      console.error('Verification failed:', error);
-      throw error;
-    }
+  AuthProvider.propTypes = {
+    children: PropTypes.node.isRequired,
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    setUser(null);
+    localStorage.removeItem('userRole');
+    setAuthState({
+      isAuthenticated: false,
+      userRole: null,
+      isLoading: false
+    });
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    verify,
-    logout
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-AuthProvider.propTypes = {
-    children: PropTypes.node.isRequired,
-  };
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return (
+    <AuthContext.Provider value={{ ...authState, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

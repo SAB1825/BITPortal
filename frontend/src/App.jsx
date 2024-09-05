@@ -1,16 +1,20 @@
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 import Register from './components/Auth/Register';
 import Verify from './components/Auth/Verify';
 import SignIn from './components/Auth/SignIn';
 import ForgotPassword from './components/Auth/ForgetPassword';
-import AdminDashboard from './pages/admin/AdminDashboard';
 import UserDashboard from './pages/user/UserDashboard';
 import Profile from './pages/user/Profile';
 import Complaints from './pages/user/Complaints';
 import GuestDetails from './pages/user/GuestDetails';
+import AdminLayout from './pages/admin/AdminLayout';
+import Staffs from './pages/admin/Staffs';
+import AdminComplaints from './pages/admin/AdminComplaints';
+import AdminGuests from './pages/admin/AdminGuest';
+import AdminAnnouncement from './pages/admin/AdminAnouncement';
+import { useEffect, useState } from 'react';
 
 function useAuth() {
   const [authState, setAuthState] = useState({
@@ -113,7 +117,17 @@ function PublicRoute({ children }) {
   return children;
 }
 
+PublicRoute.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
 function App() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Router>
       <Routes>
@@ -124,8 +138,16 @@ function App() {
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/" element={<Navigate to="/signin" />} />
 
+        {/* Admin routes */}
+        <Route path="/admin" element={<PrivateRoute role="admin"><AdminLayout /></PrivateRoute>}>
+          <Route index element={<Navigate to="/admin/staffs" replace />} />
+          <Route path="staffs" element={<Staffs />} />
+          <Route path="complaints" element={<AdminComplaints />} />
+          <Route path="guest" element={<AdminGuests />} />
+          <Route path="announcement" element={<AdminAnnouncement />} />
+        </Route>
 
-        <Route path="/admin/dashboard" element={<PrivateRoute role="admin"><AdminDashboard /></PrivateRoute>} />
+        {/* User routes */}
         <Route path="/user/dashboard" element={<PrivateRoute role="user"><UserDashboard /></PrivateRoute>}>
           <Route path="/user/dashboard/profile" element={<PrivateRoute role="user"><Profile /></PrivateRoute>} />
           <Route path="/user/dashboard/complaints" element={<PrivateRoute role="user"><Complaints /></PrivateRoute>} />

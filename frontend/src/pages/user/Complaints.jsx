@@ -73,7 +73,7 @@ const Complaints = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 bg-black ">
+    <div className="max-w-7xl mx-auto p-4 bg-transparent ">
       <h2 className="text-2xl text-white font-bold mb-4">Your Complaints</h2>
       <button
         onClick={() => setShowForm(true)}

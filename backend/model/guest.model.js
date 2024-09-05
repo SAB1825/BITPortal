@@ -7,6 +7,8 @@ const GuestSchema = new mongoose.Schema({
   numberOfGuest: { type: String, required: true },
   checkInDate: { type: Date, required: true },
   checkOutDate: { type: Date, required: true },
+  actualCheckInTime: { type: Date },
+  actualCheckOutTime: { type: Date },
   verificationCode: { type: String },
   isVerified: { type: Boolean, default: false }
 }, {

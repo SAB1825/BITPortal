@@ -18,19 +18,42 @@ const Verify = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Submitting verification:', { email, verificationCode });
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/verify', { email, verificationCode });
-      console.log('Verification successful:', response.data);
+      const response = await axios.post('http://localhost:5000/api/auth/verify', 
+        { email, verificationCode },
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          withCredentials: false
+        }
+      );
+      console.log('Verification response:', response.data);
       toast.success("Verification successful");
-      window.location.href = '/signin';
+      setTimeout(() => {
+        window.location.href = '/signin';
+      }, 2000);
     } catch (error) {
-      console.error('Verification failed:', error.response?.data || error.message);
-      alert(error.response?.data?.error || 'Verification failed. Please try again.');
+      console.error('Verification error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+      toast.error(error.response?.data?.error || 'Verification failed. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen  flex flex-col justify-center py-12 sm:px-6 lg:px-8" style={{
+      background: 'linear-gradient(to bottom left, #000000 0%, #000000 35%, #3B1717 100%)'
+    }}>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
           Verify Your Account
@@ -38,10 +61,10 @@ const Verify = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-black py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className=" py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="email" className="block text-sm font-medium text-white">
                 Email address
               </label>
               <div className="mt-1">
@@ -51,14 +74,14 @@ const Verify = () => {
                   type="email"
                   required
                   readOnly
-                  className="appearance-none text-white bg-[#232323] block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none text-white bg-[#191d22] block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
                   value={email}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="verificationCode" className="block text-sm font-medium text-white">
                 Verification Code
               </label>
               <div className="mt-1">
@@ -68,7 +91,7 @@ const Verify = () => {
                   type="text"
                   required
                   maxLength="6"
-                  className="appearance-none text-white bg-[#232323] block w-full px-3 py-2 border hover:bg-[#292929] border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none text-white bg-[#191d22] block w-full px-3 py-2 border  border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-indigo-500 sm:text-sm"
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                   placeholder="Enter 6-digit code"
@@ -79,7 +102,7 @@ const Verify = () => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-[#292929] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="w-full flex justify-center  border border-transparent rounded-md shadow-sm text-sm font-medium bg-white hover:bg-black font-bold text-black hover:text-white rounded-lg py-2 px-2"
               >
                 Verify
               </button>

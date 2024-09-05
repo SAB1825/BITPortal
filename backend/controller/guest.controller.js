@@ -124,3 +124,38 @@ export const deleteGuest = async (req, res) => {
         res.status(500).json({ error: 'An error occurred while deleting the guest.' });
     }
 };
+
+export const getAllGuests = async (req, res) => {
+    try {
+        const guests = await Guest.find().populate('user', 'quarterNumber').sort({ checkInDate: -1 });
+        res.status(200).json({ guests });
+    } catch (error) {
+        console.error('Get all guests error:', error);
+        res.status(500).json({ error: 'An error occurred while fetching guests.' });
+    }
+};
+
+export const updateGuestCheckInOut = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.params;
+        
+        let update = {};
+        if (action === 'checkin') {
+            update = { actualCheckInTime: new Date() };
+        } else if (action === 'checkout') {
+            update = { actualCheckOutTime: new Date() };
+        } else {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        const updatedGuest = await Guest.findByIdAndUpdate(id, update, { new: true });
+        if (!updatedGuest) {
+            return res.status(404).json({ error: 'Guest not found' });
+        }
+        res.status(200).json({ message: `Guest ${action} updated successfully`, guest: updatedGuest });
+    } catch (error) {
+        console.error(`Update guest ${action} error:`, error);
+        res.status(500).json({ error: `An error occurred while updating guest ${action}` });
+    }
+};

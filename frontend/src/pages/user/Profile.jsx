@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import PropTypes from 'prop-types';
-import { FaEdit, FaTrash } from 'react-icons/fa'; // Import icons
+import { FaEdit, FaTrash, FaClipboardList, FaCheckCircle, FaHourglassHalf, FaPlus } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -10,32 +11,46 @@ const Profile = () => {
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [inmates, setInmates] = useState([]);
+  const [inmateError, setInmateError] = useState(null);
   const [newInmate, setNewInmate] = useState({ name: '', relation: '', phoneNumber: '' });
   const [showInmateForm, setShowInmateForm] = useState(false);
   const [editingInmate, setEditingInmate] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [inmateToDelete, setInmateToDelete] = useState(null);
+  const [complaintStats, setComplaintStats] = useState({ total: 0, resolved: 0, pending: 0 });
+  const { authState } = useAuth(); // Use the authState from AuthContext
 
   useEffect(() => {
     fetchUserProfile();
     fetchInmates();
+    fetchComplaintStats();
   }, []);
 
   const fetchUserProfile = async () => {
     try {
+      console.log('Fetching user profile...'); // Add this log
       const token = localStorage.getItem('token');
+      console.log('Token:', token); // Add this log
+
+      if (!token) {
+        throw new Error('No token found');
+      }
+
       const response = await axios.get('http://localhost:5000/api/auth/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      console.log('Profile response:', response.data); // Add this log
+
       if (response.data && response.data.user) {
         setUser(response.data.user);
         setFormData(response.data.user);
       } else {
-        setError('Invalid response from server');
+        throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      setError('Failed to fetch user profile');
+      setError(error.message || 'Failed to fetch user profile');
     } finally {
       setIsLoading(false);
     }
@@ -47,9 +62,33 @@ const Profile = () => {
       const response = await axios.get('http://localhost:5000/api/auth/inmates', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setInmates(response.data.inmates);
+      console.log('Inmates response:', response.data); // Log the entire response
+
+      if (Array.isArray(response.data)) {
+        setInmates(response.data);
+      } else if (response.data && Array.isArray(response.data.inmates)) {
+        setInmates(response.data.inmates);
+      } else {
+        console.error('Unexpected response format for inmates:', response.data);
+        setInmateError('Unable to process inmate data');
+        setInmates([]);
+      }
     } catch (error) {
       console.error('Error fetching inmates:', error);
+      setInmateError('Failed to fetch inmates');
+      setInmates([]);
+    }
+  };
+
+  const fetchComplaintStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/auth/complaint-stats', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setComplaintStats(response.data);
+    } catch (error) {
+      console.error('Error fetching complaint stats:', error);
     }
   };
 
@@ -92,9 +131,13 @@ const Profile = () => {
       const response = await axios.post('http://localhost:5000/api/auth/inmates', newInmate, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setInmates([...inmates, response.data.inmate]);
-      setNewInmate({ name: '', relation: '', phoneNumber: '' });
-      setShowInmateForm(false);
+      if (response.data && response.data.inmate) {
+        setInmates(prevInmates => [...prevInmates, response.data.inmate]);
+        setNewInmate({ name: '', relation: '', phoneNumber: '' });
+        setShowInmateForm(false);
+      } else {
+        console.error('Unexpected response format when adding inmate:', response.data);
+      }
     } catch (error) {
       console.error('Error adding inmate:', error);
     }
@@ -141,7 +184,6 @@ const Profile = () => {
       console.error('Error updating inmate:', error);
       if (error.response && error.response.status === 404) {
         alert('Inmate not found. The inmate may have been deleted.');
-        // Refresh the inmates list
         fetchInmates();
       } else {
         alert('Failed to update inmate. Please try again.');
@@ -160,7 +202,6 @@ const Profile = () => {
       await axios.delete(`http://localhost:5000/api/auth/inmates/${inmateToDelete._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Refresh the inmates list after deletion
       fetchInmates();
       setShowDeleteConfirmation(false);
       setInmateToDelete(null);
@@ -171,13 +212,13 @@ const Profile = () => {
       } else {
         alert('Failed to delete inmate. Please try again.');
       }
-      // Refresh the inmates list anyway
       fetchInmates();
     }
   };
 
   if (isLoading) return <div className="text-center text-white">Loading...</div>;
-  if (error) return <div className="text-center text-red-500">{error}</div>;
+  if (error) return <div className="text-center text-red-500">Error: {error}</div>;
+  if (!user) return <div className="text-center text-white">No user data available</div>;
 
   if (!user || !user.profileCompleted || isEditing) {
     return (
@@ -321,170 +362,176 @@ const Profile = () => {
       </div>
     );
   }
-
+ 
   return (
-    <div className="bg-black min-h-screen text-white p-8">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* User Info Card */}
-        <div className="bg-[#212121] rounded-[30px] shadow-md p-6 transform hover:scale-105 transition-transform duration-300   md:col-span-1">
-          <img 
-            src={user.profileImage || 'https://via.placeholder.com/150'} 
-            alt="Profile" 
-            className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-white"
-          />
-          <h2 className="text-2xl font-bold text-center mb-2">{user.firstName} {user.lastName}</h2>
-          <p className="text-center text-gray-400 mb-1">{user.email}</p>
-          <p className="text-center text-blue-400 mb-4">{user.department}</p>
-          <div className="flex justify-center">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="bg-white hover:bg-black text-black hover:text-white font-bold py-2 px-4 rounded transition duration-300"
-            >
-              Edit Profile
-            </button>
+    <div className="text-white p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Profile Dashboard</h2>
+        <button
+          onClick={() => setIsEditing(true)}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full transition duration-300"
+        >
+          Edit Profile
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <StatCard
+          title="Total Complaints"
+          value={complaintStats.total}
+          icon={<FaClipboardList className="text-3xl" />}
+          color="from-orange-400 to-red-500"
+        />
+        <StatCard
+          title="Resolved Complaints"
+          value={complaintStats.resolved}
+          icon={<FaCheckCircle className="text-3xl" />}
+          color="from-pink-400 to-purple-500"
+        />
+        <StatCard
+          title="Pending Complaints"
+          value={complaintStats.pending}
+          icon={<FaHourglassHalf className="text-3xl" />}
+          color="from-blue-400 to-indigo-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <div className="bg-[#191d22] rounded-3xl p-6 shadow-lg transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+            <h3 className="text-xl font-semibold mb-4">User Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoItem label="Name" value={`${user.firstName} ${user.lastName}`} />
+              <InfoItem label="Email" value={user.email} />
+              <InfoItem label="Department" value={user.department} />
+              <InfoItem label="Quarter Number" value={user.quarterNumber} />
+              <InfoItem label="Quarter Name" value={user.quarterName} />
+              <InfoItem label="Phone Number" value={user.phoneNumber} />
+            </div>
           </div>
         </div>
 
-        {/* Contact Details Card */}
-        <div className="bg-[#212121] rounded-[30px] shadow-md p-6 transform hover:scale-105 transition-transform duration-300  md:col-span-2">
-          <h3 className="text-xl font-semibold mb-4 border-b border-white pb-2">Contact</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-9">
-          <InfoItem label="Phone Number" value={user.phoneNumber || 'Not provided'} />
-          <InfoItem label="Address" value={user.permanentAddress || 'Not provided'} />
+        <div>
+          <div className="bg-[#191d22] rounded-3xl p-6 shadow-lg transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+            <img 
+              src={user.profileImage || 'https://via.placeholder.com/150'} 
+              alt="Profile" 
+              className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-blue-500"
+            />
+            <h2 className="text-xl font-bold text-center mb-2">{user.firstName} {user.lastName}</h2>
+            <p className="text-center text-gray-400 mb-1">{user.email}</p>
+            <p className="text-center text-blue-400 mb-4">{user.department}</p>
           </div>
-          <h3 className="text-xl font-semibold mb-4 border-b border-white pb-2">Quarters Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-9">
-
-          <InfoItem label="Quarters Number" value={user.quarterNumber || 'Not provided'} />
-          <InfoItem label="Quarters Name" value={user.quarterName || 'Not provided'} />
-          </div>
-
-        </div>
-
-        
-        {/* Personal Details Card */}
-        <div className="bg-[#212121] rounded-[20px] shadow-md p-6 transform hover:scale-105 transition-transform duration-300  md:col-span-3">
-          <h3 className="text-xl font-semibold mb-4 border-b border-white pb-2">Personal Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <InfoItem label="Date of Birth" value={new Date(user.dateOfBirth).toLocaleDateString()} />
-            <InfoItem label="Age" value={user.age} />
-            <InfoItem label="Blood Group" value={user.bloodGroup} />
-            <InfoItem label="Aadhar Number" value={user.aadharNumber} />
-            <InfoItem label="Vehicle Number" value={user.vehicleNumber} />
-            </div>
-        </div>
-
-        {/* Inmates Section */}
-        <div className="mt-8 bg-[#212121] rounded-lg shadow-md p-6  col-span-full transform hover:scale-105 transition-transform duration-300">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold mb-4 border-b border-white ">Inmates</h3>
-            <button
-              onClick={() => setShowInmateForm(true)}
-              className="bg-white hover:bg-black font-bold text-black hover:text-white p-2 rounded "
-            >
-              Add Inmate
-            </button>
-          </div>
-          
-          {inmates.length > 0 ? (
-            <div className="overflow-x-auto transform hover:scale-105 transition-transform duration-300">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-">
-                    <th className="py-2 px-4">Name</th>
-                    <th className="py-2 px-4">Relation</th>
-                    <th className="py-2 px-4">Phone Number</th>
-                    <th className="py-2 px-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inmates.map((inmate) => (
-                    <tr key={inmate._id} className="border-b border-">
-                      <td className="py-2 px-4">{inmate.name}</td>
-                      <td className="py-2 px-4">{inmate.relation}</td>
-                      <td className="py-2 px-4">{inmate.phoneNumber}</td>
-                      <td className="py-2 px-4">
-                        <button
-                          onClick={() => handleEditInmate(inmate)}
-                          className="text-blue-500 hover:text-blue-600 mr-2"
-                          title="Edit"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteInmate(inmate)}
-                          className="text-red-500 hover:text-red-600"
-                          title="Delete"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-center text-gray-400">No inmates added yet.</p>
-          )}
-
-          {showInmateForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center border border-white">
-              <div className="bg-black p-6 rounded-lg w-full max-w-md border border-white">
-                <h4 className="text-lg font-semibold mb-4">{editingInmate ? 'Edit Inmate' : 'Add New Inmate'}</h4>
-                <form onSubmit={editingInmate ? handleUpdateInmate : handleAddInmate} className="space-y-4 ">
-                  <input
-                    type="text"
-                    name="name"
-                    value={editingInmate ? editingInmate.name : newInmate.name}
-                    onChange={handleInmateInputChange}
-                    placeholder="Name"
-                    className="w-full text-white p-2 border rounded bg-black"
-                  />
-                  <input
-                    type="text"
-                    name="relation"
-                    value={editingInmate ? editingInmate.relation : newInmate.relation}
-                    onChange={handleInmateInputChange}
-                    placeholder="Relation"
-                    className="w-full text-white p-2 border rounded bg-black"
-                  />
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={editingInmate ? editingInmate.phoneNumber : newInmate.phoneNumber}
-                    onChange={handleInmateInputChange}
-                    placeholder="Phone Number"
-                    className="w-full text-white p-2 border rounded bg-black"
-                  />
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowInmateForm(false);
-                        setEditingInmate(null);
-                      }}
-                      className="bg-white hover:bg-black font-bold text-black hover:text-white rounded-lg py-2 px-2"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-white hover:bg-black font-bold text-black hover:text-white rounded-lg py-2 px-2"
-                    >
-                      {editingInmate ? 'Update Inmate' : 'Add Inmate'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      <div className="mt-6 bg-[#191d22] rounded-3xl p-6 shadow-lg transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Inmates</h3>
+          <button
+            onClick={() => setShowInmateForm(true)}
+            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full flex items-center"
+          >
+            <FaPlus className="mr-2" /> Add Inmate
+          </button>
+        </div>
+        
+        {inmateError && <p className="text-red-500">{inmateError}</p>}
+        {inmates.length > 0 ? (
+          <div className="overflow-x-auto transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xlf">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="py-2 px-4">Name</th>
+                  <th className="py-2 px-4">Relation</th>
+                  <th className="py-2 px-4">Phone Number</th>
+                  <th className="py-2 px-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inmates.map((inmate) => (
+                  <tr key={inmate._id} className="border-b border-gray-700">
+                    <td className="py-2 px-4">{inmate.name}</td>
+                    <td className="py-2 px-4">{inmate.relation}</td>
+                    <td className="py-2 px-4">{inmate.phoneNumber}</td>
+                    <td className="py-2 px-4">
+                      <button
+                        onClick={() => handleEditInmate(inmate)}
+                        className="text-blue-500 hover:text-blue-600 mr-2"
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInmate(inmate)}
+                        className="text-red-500 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-center text-gray-400">No inmates added yet.</p>
+        )}
+      </div>
+
+      {showInmateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center border border-white">
+          <div className="bg-black p-6 rounded-lg w-full max-w-md border border-white">
+            <h4 className="text-lg font-semibold mb-4">{editingInmate ? 'Edit Inmate' : 'Add New Inmate'}</h4>
+            <form onSubmit={editingInmate ? handleUpdateInmate : handleAddInmate} className="space-y-4 ">
+              <input
+                type="text"
+                name="name"
+                value={editingInmate ? editingInmate.name : newInmate.name}
+                onChange={handleInmateInputChange}
+                placeholder="Name"
+                className="w-full text-white p-2 border rounded bg-black"
+              />
+              <input
+                type="text"
+                name="relation"
+                value={editingInmate ? editingInmate.relation : newInmate.relation}
+                onChange={handleInmateInputChange}
+                placeholder="Relation"
+                className="w-full text-white p-2 border rounded bg-black"
+              />
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={editingInmate ? editingInmate.phoneNumber : newInmate.phoneNumber}
+                onChange={handleInmateInputChange}
+                placeholder="Phone Number"
+                className="w-full text-white p-2 border rounded bg-black"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInmateForm(false);
+                    setEditingInmate(null);
+                  }}
+                  className="bg-white hover:bg-black font-bold text-black hover:text-white rounded-lg py-2 px-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-white hover:bg-black font-bold text-black hover:text-white rounded-lg py-2 px-2"
+                >
+                  {editingInmate ? 'Update Inmate' : 'Add Inmate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showDeleteConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center border border-white">
           <div className="bg-black p-6 rounded-lg w-full max-w-md border border-white">
@@ -511,12 +558,27 @@ const Profile = () => {
   );
 };
 
-const InfoItem = ({ label, value }) => (
-  <div className="mb-2">
-    <p className="text-gray-400">{label}</p>
-    <p className="text-lg font-semibold">{value}</p>
+const StatCard = ({ title, value, icon, color }) => (
+  <div className={`bg-gradient-to-r ${color} rounded-3xl shadow-lg p-6 text-white flex flex-col items-center justify-center transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl`}>
+    <div className="text-4xl mb-2">{icon}</div>
+    <h3 className="text-lg font-semibold mb-1">{title}</h3>
+    <p className="text-3xl font-bold">{value}</p>
   </div>
 );
+
+const InfoItem = ({ label, value }) => (
+  <div>
+    <p className="text-gray-400">{label}</p>
+    <p className="font-semibold">{value}</p>
+  </div>
+);
+
+StatCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.number.isRequired,
+  icon: PropTypes.element.isRequired,
+  color: PropTypes.string.isRequired,
+};
 
 InfoItem.propTypes = {
   label: PropTypes.string.isRequired,
