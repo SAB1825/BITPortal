@@ -14,7 +14,7 @@ app.use(express.json());
 
 // Apply verifyToken middleware to all routes under /api/auth except signin and register
 app.use("/api/auth", (req, res, next) => {
-    if (req.path === '/signin' || req.path === '/register') {
+    if (req.path === '/signin' || req.path === '/register' || req.path === '/verify') {
         next();
     } else {
         verifyToken(req, res, next);
